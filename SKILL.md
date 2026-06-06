@@ -1,15 +1,29 @@
 ---
 name: antislop
-description: Detect and fix AI-generated writing patterns (slop). Comprehensive detection with 45+ patterns across 3 severity tiers, scoring system, and editor mode that directly fixes problems. Use when scanning any content for AI tells, auditing drafts before publishing, checking if writing "sounds like AI", humanizing AI-generated text, or verifying content authenticity. Trigger on "check for slop", "does this sound like AI", "humanize this", "AI audit", "slop check", "clean up AI writing", or any request to detect/remove artificial-sounding patterns. Also use proactively before publishing any AI-assisted content.
-use_when: User wants to detect AI patterns, audit content authenticity, humanize AI text, check for slop, or verify writing doesn't sound AI-generated before publishing.
+description: Detect and fix AI-generated writing patterns. Includes general anti-slop editing plus Wikipedia-style forensic checks for markup artefacts, hallucinated references, broken citations, policy cosplay, talk-page tells, and weak indicators that should not be over-weighted. Use when scanning content for AI tells, auditing drafts before publishing, checking whether text sounds like AI, humanising AI-assisted writing, or reviewing Wikipedia/mediawiki-style text for undisclosed LLM artefacts.
+use_when: User wants to detect AI patterns, audit content authenticity, humanize AI text, check for slop, verify writing doesn't sound AI-generated, or inspect Wikipedia-style text for AI-generated markup/citation/comment artefacts before publishing.
 user-invocable: true
 tools: [Read, Edit, Write]
-last-refreshed: 2026-02-14
+last-refreshed: 2026-06-07
+pattern-count: 75+
 ---
 
 # The AntiSlop
 
-A comprehensive AI writing pattern detector and fixer. Combines patterns from [Wikipedia's Signs of AI Writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) with advanced structural detection and an editor mode that actually fixes problems.
+A comprehensive AI writing pattern detector and fixer. It combines broad anti-slop editing with Wikipedia-style forensic checks from **Wikipedia:Signs of AI writing**.
+
+This skill has two jobs:
+
+1. **General writing cleanup** — remove generic AI style, weak phrasing, template rhythm, false polish, filler, and fake enthusiasm.
+2. **Forensic audit** — flag hard artefacts that may show copy-pasted LLM output: Markdown/wikitext mixups, `turn0search0`, `contentReference`, invalid citations, fake DOI/ISBNs, hallucinated templates, non-existent policy shortcuts, and talk-page boilerplate.
+
+## Core Caveat
+
+Do not treat any single sign as proof. AI detection is probabilistic and error-prone. Human writers can use AI-like wording, and LLM-assisted writing can be heavily edited. The right output is a risk assessment with concrete evidence, not an accusation.
+
+When evidence is weak, say so. When evidence is strong, explain the exact artefact.
+
+---
 
 ## The 30-Second Test
 
@@ -17,290 +31,432 @@ A comprehensive AI writing pattern detector and fixer. Combines patterns from [W
 
 > "Could anyone have written this, for anyone?"
 
-If yes, it's slop. Like a horoscope -- technically applicable to everyone, resonant with no one.
+If yes, it is probably slop. Like a horoscope: technically applicable to everyone, resonant with no one.
 
 **What fails:**
+
 - Vague claims without specific examples
 - Advice that applies universally without context
 - Content missing the author's distinct perspective
 - Writing that could have any byline
 
 **What passes:**
-- Specific tools, dates, outcomes mentioned
+
+- Specific tools, dates, outcomes, places, or constraints
 - Personal observations grounded in experience
 - Opinions that not everyone would agree with
-- Details only this author would know
+- Details only this author or editor would know
 
 ---
 
-## Usage
+## Modes
 
-```
-/antislop
+### 1. General Anti-Slop Mode
 
-[paste your text here]
-```
+Use for articles, posts, emails, README files, reports, bios, cover letters, and AI-assisted drafts.
 
-Or ask Claude to check text directly:
+Default behaviour: **edit and fix** unless the user asks for audit only.
 
-```
-Please run antislop on this: [your text]
-```
+### 2. Wikipedia Forensics Mode
+
+Use for Wikipedia drafts, wikitext, talk-page comments, deletion discussions, article-for-creation submissions, policy arguments, and citation-heavy text.
+
+Default behaviour: **audit and flag**. Do not silently remove forensic artefacts if that would hide provenance or make an unreliable draft look clean. Fix obvious formatting only when the user owns the draft and asks for editing.
+
+Trigger phrases include:
+
+- "check this for Wikipedia AI signs"
+- "AI forensics"
+- "audit this wikitext"
+- "check citations for hallucination"
+- "does this look like ChatGPT pasted into Wikipedia"
+- "scan for turn0search0 / oaicite / fake DOI"
 
 ---
 
 ## How It Works
 
-1. **Run the Horoscope Test** - Could anyone have written this for anyone?
-2. **Scan for patterns** - 45+ known AI tells across 6 categories
-3. **Calculate slop score** - Tiered severity with quantifiable scoring
-4. **Apply fixes** - Editor mode rewrites problems, not just flags them
-5. **Report changes** - Before/after for every fix applied
+1. Run the Horoscope Test.
+2. Scan content, language, style, structure, communication, markup, citations, miscellaneous provenance, and talk-page/comment patterns.
+3. Separate **strong artefacts** from weak style tells.
+4. Calculate a slop/forensics score.
+5. Fix style issues when safe.
+6. Flag citation/provenance issues for manual verification instead of hiding them.
+7. Report exactly what changed and what still needs human judgement.
 
 ---
 
-## Detection Patterns (35+)
+## Severity Tiers
 
-### Tier 1: Almost Always AI (Remove Immediately)
+### Tier 1: Strong AI Artefacts or High-Risk Signals
 
-These phrases are so strongly associated with AI that their presence alone suggests unedited output.
+These deserve immediate attention. In Wikipedia-style text, several of these can justify a deeper source/provenance check.
 
-| Pattern | Example | Fix |
-|---------|---------|-----|
-| Delve | "Let's delve into..." | Remove or replace with direct statement |
-| Game-changer | "This game-changing approach..." | Describe the actual impact |
-| Revolutionary | "A revolutionary new method..." | State what it actually does |
-| Unlock potential | "Unlock your potential..." | Remove entirely |
-| Leverage (as verb) | "Leverage these insights..." | "Use" |
-| It's worth noting | "It's worth noting that..." | Just state the thing |
-| Moreover/Furthermore | "Moreover, this approach..." | Remove or use "Also" |
-| Today's digital landscape | "In today's digital landscape..." | Remove |
-| Cutting-edge | "Cutting-edge solutions..." | Remove |
-| Pivotal moment | "Marking a pivotal moment in..." | State what happened |
-| Tapestry (abstract) | "A rich tapestry of influences..." | Remove or be specific |
-| Intricate/intricacies | "The intricacies of..." | "Details of" or remove |
-| Showcase (as verb) | "Showcasing their commitment..." | "Shows" or describe what happened |
-| Vibrant | "A vibrant community of..." | Remove or use specific detail |
-| Interplay | "The interplay between X and Y..." | "How X and Y affect each other" |
-| Garner | "Garnering attention from..." | "Got attention from" or be specific |
-| Align with | "Aligning with broader trends..." | State the actual relationship |
+| Pattern | Example | Action |
+|---|---|---|
+| Chatbot citation residue | `turn0search0`, `turn1view0`, `contentReference`, `oaicite`, `oai_citation`, `grok_card`, `attributableIndex`, `attached_file`, `+1` markers | Flag as strong paste artefact; remove only after checking source trail |
+| Markdown inside wikitext | `# Heading`, `**bold**`, fenced code blocks, `---`, Markdown links inside Wikipedia draft | Convert to valid wikitext if editing; flag as likely copy-paste if auditing |
+| Placeholder URLs or source slots | `PASTE_URL_HERE`, `SOURCE NEEDED`, `Add if available with citation` in generated-looking sections | Flag and replace with real verified source or remove |
+| Invalid DOI/ISBN | DOI fails to resolve, ISBN checksum invalid | Flag possible hallucinated reference; verify externally |
+| DOI mismatch | DOI resolves but title/authors/journal do not match the cited claim | Flag as high-risk hallucination |
+| Broken citation cluster | Multiple new citations are 404/dead/non-existent and not archived | Flag; do not trust facts until verified |
+| Unused list-defined references | `<references><ref name="x">...</ref></references>` but no inline use | Fix markup and verify that sources support text |
+| Hallucinated template/category | Non-existent infobox, fake template parameter, red-linked category that looks SEO-plausible | Check template/category exists before keeping |
+| Fake Wikipedia shortcut | `WP:BIOSIG`, `WP:NOTENGLISH`, `WP:AFDPURPOSE`, plausible but non-existent shortcut | Flag policy hallucination; replace with real policy only if valid |
+| Fabricated source assessment | Claims about sources that the source does not make | Flag as synthesis or hallucination |
+| Prompt refusal / chatbot self-reference | "I can't browse", "as an AI", "my training data" | Remove; investigate surrounding text |
 
-**Research evidence:**
-- Finnish study (56,878 essays): "delve" usage increased 10.45x post-ChatGPT
-- Georgia Tech (168.3M articles): "delve" went from 0.31 to 7.9 per 1,000 papers in Q1 2024
-- Biomedical study: co-usage of "delve," "realm," "underscore" increased up to 85x in 2023-2024
-
-### Tier 2: Suspicious When Repeated
-
-Problematic when overused or clustered.
+### Tier 2: Suspicious When Repeated or Clustered
 
 | Pattern | Example | Fix |
-|---------|---------|-----|
-| Here's the thing | Used repeatedly | Keep first, vary subsequent |
-| At the end of the day | "At the end of the day..." | Remove |
-| The bottom line | "The bottom line is..." | Just state it |
-| Let's dive in | "Without further ado, let's dive in" | Remove |
-| Comprehensive and thorough | Paired adjectives | Pick one |
-| Simple and straightforward | Paired adjectives | Pick one |
-| In this post, we'll cover | Template opening | Remove |
-| By the end of this article | Promise opener | Remove |
+|---|---|---|
+| Delve | "Let's delve into..." | Remove or state the topic directly |
+| Game-changer / revolutionary | "game-changing approach" | Describe the concrete effect |
+| Unlock potential | "unlock your potential" | Remove |
+| Leverage as verb | "leverage these insights" | "use" or concrete action |
+| It's worth noting | "It's worth noting that..." | Just state the point |
+| Moreover / furthermore | Repeated transitions | Remove or use natural flow |
+| Today's digital landscape | Generic opening | Remove |
+| Cutting-edge | Promotional filler | Replace with specific capability |
+| Pivotal moment | Inflated significance | State what happened |
+| Tapestry, intricate, vibrant, interplay, garner, underscore | AI vocabulary cluster | Replace with concrete words or cut |
+| Here's the thing / bottom line / at the end of the day | Repeated rhetorical framing | Keep at most one if voice-appropriate |
+| Paired adjectives | "comprehensive and thorough" | Pick one or be specific |
+| Template openings | "In this post, we'll cover..." | Start with the point |
 
-### Tier 3: Watch for Clusters
+### Tier 3: Weak Alone, Useful in Clusters
 
-Fine individually, problematic together.
+Do not over-weight these. They can be normal human style.
 
-| Pattern | Example | Fix |
-|---------|---------|-----|
-| However/But | Every paragraph starts this way | Vary transitions |
-| Firstly/Secondly/Thirdly | Enumerated points | Use natural flow |
-| Moving forward | "Moving forward, we'll..." | Remove |
-| Robust/Seamless/Scalable | Corporate buzzwords | Use specific terms |
-| Stakeholder | "Key stakeholders..." | Name them or say "people" |
+| Pattern | Example | Safer interpretation |
+|---|---|---|
+| Perfect grammar | Clean formal writing | Weak indicator only |
+| Formal tone | Academic, careful, professional prose | Could be code-switching or edited prose |
+| Transition words | however, additionally, firstly | Weak unless repetitive and template-like |
+| Unsourced content | Missing citations | Bad editing, not necessarily AI |
+| Bland prose | Generic style | Weak unless paired with concrete artefacts |
+| Markdown alone | Technical users often write Markdown | Stronger only when mixed with wikitext incorrectly |
+| English variety mismatch | Indian topic in American English, etc. | Consider non-native speakers and editing context |
 
 ---
 
 ## Content Patterns
 
-| # | Pattern | Before | After |
-|---|---------|--------|-------|
+| # | Pattern | Before | After / Action |
+|---|---|---|---|
 | 1 | **Significance inflation** | "marking a pivotal moment in the evolution of..." | "was established in 1989 to collect statistics" |
-| 2 | **Notability name-dropping** | "cited in NYT, BBC, FT, and The Hindu" | "In a 2024 NYT interview, she argued..." |
-| 3 | **Superficial -ing analyses** | "symbolizing... reflecting... showcasing..." | Remove or expand with actual sources |
-| 4 | **Promotional language** | "nestled within the breathtaking region" | "is a town in the Gonder region" |
-| 5 | **Vague attributions** | "Experts believe it plays a crucial role" | "according to a 2019 survey by..." |
-| 6 | **Formulaic challenges** | "Despite challenges... continues to thrive" | Specific facts about actual challenges |
-| 7 | **Outline-like conclusions** | "Challenges" section ending with optimistic outlook | Remove or replace with actual analysis |
+| 2 | **Legacy/broader trend stuffing** | "reflects a broader shift toward..." | Keep only sourced, relevant claims |
+| 3 | **Canned notability name-dropping** | "cited in NYT, BBC, FT, and The Hindu" | Explain what each source actually says, or just cite it |
+| 4 | **Media coverage theatre** | "profiled in multiple high-quality outlets" | State the coverage directly with citations |
+| 5 | **Active social media presence** | "maintains an active social media presence" | Remove unless specifically notable and sourced |
+| 6 | **Superficial -ing analysis** | "reflecting..., symbolizing..., showcasing..." | Remove or support with a source |
+| 7 | **Promotional language** | "nestled within the breathtaking region" | Neutral description |
+| 8 | **Vague attribution** | "Experts believe..." | Name the expert/source or remove |
+| 9 | **Outline-like conclusion** | "Challenges and future prospects..." | Replace with sourced facts or delete |
+| 10 | **Treating broad article titles as proper nouns** | "The History of X has evolved..." | Rewrite as normal prose |
+| 11 | **Conservation/ecosystem generic padding** | Generic claims about species and ecosystem importance | Keep only specific sourced ecological facts |
+| 12 | **Discussion-about-discussion padding** | "has sparked debate about authenticity and identity" | Cite actual debate or remove |
 
 ---
 
-## Language Patterns
+## Language and Grammar Patterns
 
 | # | Pattern | Before | After |
-|---|---------|--------|-------|
-| 7 | **Copula avoidance** | "serves as... features... boasts..." | "is... has..." |
-| 8 | **Negative parallelisms** | "It's not just X, it's Y" | State the point directly |
-| 9 | **Rule of three** | "innovation, inspiration, and insights" | Use natural number of items |
-| 10 | **Synonym cycling** | "protagonist... main character... central figure..." | "protagonist" (repeat when clearest) |
-| 11 | **False ranges** | "from the Big Bang to dark matter" | List topics directly |
-| 12 | **Clinical formality** | "individuals" / "utilize" / "implement" | "people" / "use" / "do" |
+|---|---|---|---|
+| 13 | **High-density AI vocabulary** | pivotal, crucial, intricate, underscore, foster, realm, tapestry | Use plain specific words |
+| 14 | **Copula avoidance** | "serves as", "features", "boasts" | "is", "has" |
+| 15 | **Negative parallelism** | "not just X, but Y" | State Y directly |
+| 16 | **Rule of three** | "innovation, inspiration, and insight" | Use the natural number of items |
+| 17 | **Synonym cycling** | protagonist / central figure / main character | Repeat the clearest term |
+| 18 | **False ranges** | "from X to Y" when not a true range | List the actual items |
+| 19 | **Clinical formality** | individuals / utilize / implement / facilitate | people / use / do / help |
+| 20 | **Over-hedging** | could potentially possibly | Use one qualifier if needed |
+| 21 | **Filler phrases** | in order to / due to the fact that | to / because |
 
 ---
 
 ## Style Patterns
 
-| # | Pattern | Before | After |
-|---|---------|--------|-------|
-| 13 | **Em dash overuse** | "institutions--not the people--yet this continues--" | Use commas or periods |
-| 14 | **Boldface overuse** | "**OKRs**, **KPIs**, **BMC**" | "OKRs, KPIs, BMC" |
-| 15 | **Emoji headers** | "Target Goal / Lightbulb Key Insight / Check Action Item" | Remove emojis |
-| 16 | **Title Case Headings** | "Strategic Negotiations And Partnerships" | "Strategic negotiations and partnerships" |
-| 17 | **List addiction** | Everything becomes bullets | Convert to prose where appropriate |
-| 18 | **Curly quotes** | Use straight quotes consistently |
-| 19 | **Unnecessary tables** | 3-row table that should be a sentence | Convert to prose |
+| # | Pattern | Before | After / Action |
+|---|---|---|---|
+| 22 | **Em dash overuse** | Several dashes in one paragraph | Use commas, semicolons, periods, or rewrite |
+| 23 | **Boldface overuse** | `**OKRs**, **KPIs**, **BMC**` | Remove most bolding |
+| 24 | **Emoji headers** | `✅ Action`, `🚀 Next Steps` | Remove emojis in formal text |
+| 25 | **Title case headings** | "Strategic Negotiations And Partnerships" | Sentence case unless style guide says otherwise |
+| 26 | **Inline-header vertical lists** | Bold mini-heading + sentence for every bullet | Convert to prose or fewer bullets |
+| 27 | **List addiction** | Everything becomes bullets | Convert where prose is clearer |
+| 28 | **Unnecessary tables** | 3-row table for simple comparison | Use a sentence or short list |
+| 29 | **Curly quotes/apostrophes inconsistency** | Mixed `"`, `“”`, `'`, `’` | Standardise for the target format |
+| 30 | **Skipping heading levels** | H2 then H4 | Fix hierarchy |
+| 31 | **Thematic breaks before headings** | `---` before every section | Remove unless actually needed |
 
 ---
 
-## Structural Patterns (Critical)
-
-These bypass phrase-based detection but are major tells.
+## Structural Patterns
 
 ### Staccato Fragment Spam
 
-Three or more consecutive short declarative sentences stating facts in parallel structure. AI's version of bullets pretending to be prose.
+Three or more consecutive short declarative sentences that could be bullets.
 
 **Before:**
+
 > The model is impressive. Complex code ships fast. Documentation writes itself. Problems get solved quickly.
 
 **After:**
-> The model is impressive -- complex code ships in a single session, documentation practically writes itself, and problems that would have taken a weekend now take an afternoon.
 
-**Detection rule:** 3+ consecutive sentences that are all under 10 words, all declarative, following parallel structure, and could be bullet points.
+> The model is impressive: complex code ships in a single session, documentation becomes easier to draft, and problems that used to take a weekend can sometimes be solved in an afternoon.
+
+**Detection rule:** 3+ consecutive sentences that are all short, declarative, parallel, and bullet-like.
 
 ### Sentence Uniformity
 
-Every sentence 10-15 words. Short. Punchy. Exhausting.
-
-Real writing has rhythm -- mix 5-word sentences for impact with 25-word sentences that explore implications.
+Every sentence lands in the same length range. Real writing has rhythm. Mix short and long sentences only when the meaning needs it, not as a trick.
 
 ### Comparator Sentences
 
 **Before:**
+
 > This isn't theoretical. It's practical.
-> This isn't a feature. It's a philosophy.
-> It's not about X. It's about Y.
 
 **After:**
-> Here's how it works in practice:
-> [Just state what it is]
 
-AI loves this rhetorical pattern. It sounds punchy but wastes words telling you what something isn't.
+> Here is how it works in practice.
 
 ### Over-Balanced Sections
 
-Every section same length. All paragraphs 3-4 sentences. AI doesn't have opinions, so it gives balanced coverage to everything. Real writing reflects priorities.
+Every section has the same length and structure. Real writing reflects priority; some points need a line, others need a paragraph.
+
+### Manufactured Personality
+
+AI trying to sound human can be worse than plain AI prose.
+
+**Before:**
+
+> Five services. Five tabs. Five headaches. That got old fast. So I built an MCP server.
+
+**After:**
+
+> I use five services in this workflow. Each one is useful, but each adds another dashboard and another context switch.
 
 ---
 
 ## Communication Patterns
 
-| # | Pattern | Before | After |
-|---|---------|--------|-------|
-| 18 | **Chatbot artifacts** | "I hope this helps! Let me know if..." | Remove entirely |
-| 19 | **Cutoff disclaimers** | "While details are limited in available sources..." | Find sources or remove |
-| 20 | **Sycophantic tone** | "Great question! You're absolutely right!" | Respond directly |
-| 21 | **Flattery sandwiches** | "While traditional methods have merit, modern approaches offer..." | State your actual position |
+| # | Pattern | Before | Action |
+|---|---|---|---|
+| 32 | **Chatbot artefacts** | "I hope this helps! Let me know if..." | Remove |
+| 33 | **Sycophantic opener** | "Great question! You're absolutely right!" | Answer directly |
+| 34 | **Cutoff disclaimer** | "While details are limited in available sources..." | Find sources or state uncertainty plainly |
+| 35 | **Placeholder text** | "[insert example here]" | Replace or remove |
+| 36 | **Canned collaboration** | "I welcome constructive feedback..." | Make a concrete request or cut |
+| 37 | **Canned focus-on-content appeal** | "Let's focus on improving the article rather than accusations" | Check whether it avoids the actual issue |
+| 38 | **Subject-line leakage** | "Subject: Request for Review..." pasted into comment | Remove and flag as copy-paste artefact |
+| 39 | **Plain-text section titles in comments** | "Importance of Thorough Research" followed by essay | Convert to normal comment if needed |
 
 ---
 
-## Advanced Structural Tells
+## Wikipedia / MediaWiki Markup Forensics
 
-### Manufactured Personality
+Use this section when text is meant for Wikipedia, another MediaWiki site, or a citation-heavy encyclopaedic draft.
 
-AI trying to sound human but coming across as performative:
+### Markdown-in-Wikitext Checks
 
-**Before:**
-> Five services. Five tabs. Five headaches.
-> That got old fast.
-> So I built an MCP server that unifies all of them.
+Flag these in Wikipedia-style text:
 
-**After:**
-> I use five different services for my workflow. They're solid platforms, but like most SaaS tools, each means another dashboard, another set of menus to navigate, another context switch.
+- `# Heading` instead of `== Heading ==`
+- `**bold**` or `__bold__` instead of `'''bold'''`
+- `*italic*` instead of `''italic''`
+- `[text](https://example.com)` instead of `[https://example.com text]` or a citation template
+- fenced code blocks: triple backticks, especially ```wikitext
+- `---`, `***`, or `___` as thematic breaks instead of proper wikitext use
+- Markdown bullets nested in ways that break MediaWiki rendering
 
-No manufactured punch. No snark. Just describes the situation.
+### Broken Wikitext Checks
 
-### Self-Promotional Framing
+Flag and repair when safe:
 
-Content positioning author's accomplishments as the headline instead of reader's transformation.
+- Unclosed `{{template` or `<ref>` tags
+- Mixed Markdown and wikitext in the same list or section
+- Comments such as `<!-- Add if available with citation -->` in generated-looking infobox edits
+- Placeholder URLs, fake filenames, or generated image captions
+- Sections that look like copied chatbot output rather than article text
 
-**Before:**
-> I shipped 11 projects over the holidays. Here's what I learned.
+### Chatbot Reference Artefacts
 
-**After:**
-> Most developers aren't aware that [observation about the reader's situation]. Here's what's changing...
+Search for exact strings and regex-like variants:
 
-The author's experience is *evidence*, not the story.
+- `turn0search0`, `turn1search`, `turn0view`, `turn1view`
+- `contentReference`, `oaicite`, `oai_citation`, `oai_cite`
+- `grok_card`, `attributableIndex`, `attached_file`, `sandbox:/mnt/data/`
+- malformed citation markers such as `【`, `】`, `cite`, or orphaned citation glyphs
+- `utm_source=chatgpt.com`, `utm_source=openai`, `utm_source=copilot.com`, `referrer=grok.com`
 
-### Explanatory Header Templates
+### Categories and Templates
 
-Headers that promise insight but deliver template structure:
+Flag:
 
-- "Why This Actually Works"
-- "What This Means For You"
-- "The Real Reason..."
-- "Here's What's Really Going On"
+- red-linked categories that look plausible but wrong
+- SEO-like categories added to drafts
+- obsolete categories returned by model memory
+- non-existent infoboxes
+- fake template parameters that existing templates ignore
+- hallucinated language templates or maintenance templates
 
-**Fix:** Replace with descriptive headers that summarize the actual content.
+Do not assume every red link is AI. New editors and old copied material can also create bad categories/templates.
 
 ---
 
-## Filler and Hedging
+## Citation Forensics
 
-| # | Pattern | Before | After |
-|---|---------|--------|-------|
-| 22 | **Filler phrases** | "In order to" / "Due to the fact that" | "To" / "Because" |
-| 23 | **Excessive hedging** | "could potentially possibly" | "may" |
-| 24 | **Generic conclusions** | "The future looks bright" | Specific plans or facts |
+When citation issues appear, do **not** merely rewrite around them. Verify the source.
+
+| Check | Strong signal when... | Action |
+|---|---|---|
+| Broken external links | Several new links are dead, unarchived, or never existed | Mark facts unsupported until checked |
+| DOI invalid | DOI does not resolve | Flag possible hallucination |
+| DOI mismatch | DOI resolves to unrelated paper | Flag high-risk fabricated citation |
+| ISBN invalid | Checksum fails | Flag likely wrong book reference |
+| Book citation too vague | No page, chapter, URL, edition, or quote for a specific claim | Ask for page-level support |
+| Reference says less than prose claims | Citation exists but does not support the sentence | Mark failed verification |
+| Unused named references | list-defined refs not used inline | Fix markup and verify sources |
+| Undefined named references | `<ref name="x" />` without definition | Find or remove |
+| URL tracking artefacts | `utm_source=chatgpt.com` or similar | Remove tracking; flag provenance concern |
+| Fake publication details | plausible title, journal, date, author pattern | Verify externally before trusting |
+
+### Source-Support Rule
+
+For any factual claim in audited text, ask:
+
+1. Does the cited source exist?
+2. Does it say this exact thing?
+3. Is the source reliable for this claim?
+4. Is the prose adding synthesis or significance that the source does not support?
+
+If any answer fails, flag the claim even if the prose sounds human.
+
+---
+
+## Miscellaneous Provenance Patterns
+
+| Pattern | Why it matters | Caution |
+|---|---|---|
+| Sudden style shift | A user's new edit/comment is suddenly polished, formal, or US-English compared with older writing | Non-native speakers and code-switching can explain this; do not overstate |
+| Exhaustive edit summaries | Long polished summaries for simple edits | Weak alone, stronger with other artefacts |
+| Article-for-creation submission statements | "I believe this meets all criteria..." | Common AI boilerplate; check sources |
+| Pre-placed maintenance templates | Draft includes cleanup tags before review | Could be human, but can indicate generated draft packaging |
+| Permissions gaming | Reassuring statements about permission/compliance without substance | Treat as conduct/provenance flag, not proof |
+| Historical model artefacts | abrupt cutoffs, prompt refusal, old access dates, section summaries | Useful for older text; less useful for current models |
+
+---
+
+## Indicators of AI-Written Wikipedia Comments
+
+These are for talk pages, deletion discussions, unblock requests, and review desks.
+
+| Pattern | Example | Action |
+|---|---|---|
+| Canned quality/good-faith language | "I am committed to improving the article in line with Wikipedia standards" | Ask for concrete diffs/sources |
+| Canned constructive-criticism offer | "I welcome any guidance from experienced editors" | Check if they respond specifically after feedback |
+| Focus-on-content deflection | "Let's focus on improving the article rather than accusations" | Do not let it dodge source/provenance issues |
+| Subject-line leakage | `Subject: Request for Permission to Edit...` | Strong copy-paste artefact |
+| Plain-text section headings | Essay-like headings in a talk comment | Flag template generation style |
+| Fake policy/guideline citations | `WP:NOTELOCAL`, `WP:BIOSIG`, `WP:NOTENGLISH` if non-existent | Verify shortcut before accepting argument |
+| Wikilawyering with invented quotes | policy quote not found on cited page | Flag and correct |
+| Emoji as formatting | repeated ✅/⚠️/📌 in formal discussion | Remove; weak alone |
+| Canned source-assessment requests | "Please assess whether these meet reliable source standards" without specifics | Ask for exact source-claim mapping |
+| Confusion over declined draft reason | generic reply to a specific decline reason | Ask for targeted correction |
+
+---
+
+## Signs of Human Writing / Lower-Risk Evidence
+
+Use this to avoid false positives.
+
+- Text predates public ChatGPT release on 30 November 2022.
+- The author's older and newer writing is consistent in quirks, grammar, formatting, and English variety.
+- The author can explain their own editorial choices, source selection, and revisions in concrete terms.
+- The writing contains specific local knowledge, constraints, mistakes, or rough edges that fit the author.
+- The source trail is real, relevant, and supports the claims.
+- Markdown use is expected because the context is GitHub, Reddit, Slack, Obsidian, technical notes, or a README.
+
+Never clear text as human solely because it has typos. Never accuse text solely because it is clean.
 
 ---
 
 ## Scoring System
 
+Use two scores where relevant: **Writing Slop Score** and **Forensic Risk Score**.
+
+### Writing Slop Score
+
 | Pattern Type | Points |
-|--------------|--------|
-| Each Tier 1 phrase | +3 |
-| Each Tier 2 phrase (repeated) | +2 |
-| Tier 3 cluster (3+ in section) | +2 |
-| Failed horoscope test | +5 |
-| Staccato fragment spam (per instance) | +4 |
-| Sentence uniformity detected | +3 |
-| Comparator sentences (per instance) | +2 |
+|---|---:|
+| Each Tier 2 phrase | +2 |
+| Tier 3 cluster | +2 |
+| Failed Horoscope Test | +5 |
+| Staccato fragment spam | +4 |
+| Sentence uniformity | +3 |
+| Comparator sentences | +2 each |
 | Manufactured personality | +4 |
 | Self-promotional framing | +5 |
-| Template headers (per instance) | +2 |
+| Template headers | +2 each |
+| Excessive bullets/tables/bold | +2 |
 
-**Score interpretation:**
-- **0-5:** Low risk (minor edits)
-- **6-12:** Medium risk (significant editing required)
-- **13+:** High risk (likely unedited AI output)
+**Interpretation:**
+
+- **0-5:** Low risk; minor edits
+- **6-12:** Medium risk; significant editing required
+- **13+:** High risk; likely unedited or lightly edited AI style
+
+### Forensic Risk Score
+
+| Pattern Type | Points |
+|---|---:|
+| Chatbot citation residue (`turn0search0`, `oaicite`, etc.) | +8 |
+| Invalid DOI/ISBN | +6 |
+| DOI/source mismatch | +8 |
+| Multiple broken, unarchived citations | +6 |
+| Hallucinated template/category/policy shortcut | +6 |
+| Markdown-wikitext hybrid in Wikipedia draft | +5 |
+| Unused/undefined named refs | +4 |
+| URL tracking artefact from AI tool | +5 |
+| Subject-line leakage in talk comment | +5 |
+| Canned talk-page policy boilerplate | +3 |
+| Sudden style shift | +2 only with context |
+| Weak indicator alone | +0 to +1 |
+
+**Interpretation:**
+
+- **0-4:** Low forensic risk
+- **5-11:** Medium risk; verify sources and markup
+- **12+:** High risk; do not publish until source/provenance issues are checked
 
 ---
 
-## Editor Mode (Default)
+## Editor Mode
 
-This skill is an **editor**, not a critic. After detection:
+This skill is an editor for style issues, but a forensic auditor for source/provenance issues.
 
-1. **Apply all fixes directly** using the Edit tool
-2. **Report changes made** with before/after examples
-3. **Save the cleaned file** in place
+### Safe to fix directly
 
-**Fix priority:**
-1. Remove all Tier 1 phrases
-2. Deduplicate Tier 2 phrases (keep first, vary subsequent)
-3. Break up staccato fragments (combine with em-dashes, commas, conjunctions)
-4. Fix comparator sentences (just state what it is)
-5. Vary sentence lengths where uniformity detected
+- generic phrases
+- repeated transitions
+- sentence uniformity
+- staccato fragments
+- weak openings/conclusions
+- excessive bold, emoji, bullets, and tables
+- Markdown-to-wikitext formatting when the meaning is clear and the user owns the draft
 
-To audit without editing, explicitly request "audit only."
+### Do not silently fix without reporting
+
+- fake or broken citations
+- invalid DOI/ISBN
+- source mismatches
+- hallucinated categories/templates/policies
+- chatbot citation artefacts
+- provenance indicators such as `turn0search0` or `oaicite`
+
+For these, flag the issue and explain what needs verification.
 
 ---
 
@@ -310,99 +466,114 @@ To audit without editing, explicitly request "audit only."
 ## AntiSlop Report
 
 **Horoscope Test:** [PASS/FAIL] - [reason]
-**Slop Score:** [X] → [Y] - [Risk Level]
+**Writing Slop Score:** [X] - [Low/Medium/High]
+**Forensic Risk Score:** [Y] - [Low/Medium/High/Not applicable]
+
+### Strong Artefacts
+- [exact artefact] at [location] - [why it matters]
+
+### Content / Language / Style Issues
+- [pattern] at [location] - [fix]
+
+### Markup Issues
+- [Markdown/wikitext/template/category issue] - [fix or verification needed]
+
+### Citation Issues
+- [source/DOI/ISBN/ref issue] - [verify/remove/fix]
+
+### Comment / Policy Issues
+- [talk-page or policy-shortcut issue] - [verify or rewrite]
+
+### Weak or Ineffective Indicators Ignored
+- [e.g., formal tone alone, perfect grammar alone]
 
 ### Fixes Applied
-
 | Location | Before | After |
-|----------|--------|-------|
-| Line 3 | "Let's delve into the details" | "Here are the details" |
-| Line 15 | "Game-changing approach" | "Different approach" |
+|---|---|---|
+| ... | ... | ... |
 
-### Remaining Considerations
-- [Any issues requiring human judgment]
+### Needs Human Verification
+- [source or provenance issue]
 
-### The Core Principle
-Your voice is in the specificity, the opinions, the rough edges, and the rhythm. Protect those.
+### Verdict
+[Clear but cautious conclusion: low/medium/high risk, not proof]
 ```
 
 ---
 
 ## Full Example
 
-**Before (AI-sounding):**
-> Great question! Here is an essay on this topic. I hope this helps!
->
-> AI-assisted coding serves as an enduring testament to the transformative potential of large language models, marking a pivotal moment in the evolution of software development. In today's rapidly evolving technological landscape, these groundbreaking tools--nestled at the intersection of research and practice--are reshaping how engineers ideate, iterate, and deliver.
->
-> At its core, the value proposition is clear: streamlining processes, enhancing collaboration, and fostering alignment. It's not just about autocomplete; it's about unlocking creativity at scale.
->
-> - Speed: Code generation is significantly faster.
-> - Quality: Output quality has been enhanced.
-> - Adoption: Usage continues to grow.
->
-> In conclusion, the future looks bright. Let me know if you'd like me to expand!
+**Before:**
 
-**After (Fixed):**
-> AI coding assistants speed up some tasks. In a 2024 study by Google, developers using Codex completed simple functions 55% faster than a control group, but showed no improvement on debugging or architectural decisions.
+> Subject: Request for Review and Clarification Regarding Draft Article
 >
-> The tools are good at boilerplate: config files, test scaffolding, repetitive refactors. They're bad at knowing when they're wrong.
+> The subject has been profiled in multiple high-quality, independent, and widely-read outlets, including The Australian and SBS News. This demonstrates significant, sustained, and verifiable coverage, meeting WP:BIOSIG and WP:SIGCOV.
 >
-> Mira, an engineer at a fintech startup, said she uses Copilot "like autocomplete for boring code" but reviews every line before committing. Jake, a senior dev at a larger company, disabled it after it kept suggesting patterns from a deprecated internal library.
->
-> The productivity claims are hard to verify. GitHub says Copilot users "accept 30% of suggestions," but acceptance is not correctness.
+> ```wikitext
+> # Legacy and Impact
+> **The organisation** plays a pivotal role in the evolving landscape of community advocacy.
+> <ref>{{cite web|title=Example|url=PASTE_URL_HERE|access-date=2026-02-09}}</ref>
+> ```
+
+**Report summary:**
+
+- Subject-line leakage: strong copy-paste artefact.
+- `WP:BIOSIG` must be verified; plausible fake shortcut.
+- Markdown heading/bold inside fenced wikitext block.
+- Placeholder citation URL.
+- Significance inflation: "pivotal role", "evolving landscape".
+- Do not publish until sources and shortcuts are verified.
+
+**After, if the user owns the draft and sources are real:**
+
+> The draft should state what each independent source says and cite it directly. Remove the subject-line text, replace invalid shortcuts with real policy references, convert Markdown to wikitext, and delete unsupported claims about significance.
 
 ---
 
 ## Pattern Refresh Protocol
 
-Patterns go stale as AI models evolve. Before scanning, check `last-refreshed` in frontmatter. If >30 days old, refresh first.
+Patterns go stale as models and copy-paste artefacts change. Before scanning, check `last-refreshed` in frontmatter. If it is more than 30 days old, refresh.
 
 **Refresh workflow:**
-
-1. Fetch the latest patterns from Wikipedia:
 
 ```bash
 # Signs of AI writing - full wikitext
 curl -s "https://en.wikipedia.org/w/api.php?action=parse&page=Wikipedia:Signs_of_AI_writing&prop=wikitext&format=json" | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
-print(data['parse']['wikitext']['*'][:30000])
+print(data['parse']['wikitext']['*'][:50000])
 " > /tmp/antislop-signs.txt
 
 # WikiProject AI Cleanup
 curl -s "https://en.wikipedia.org/w/api.php?action=parse&page=Wikipedia:WikiProject_AI_Cleanup&prop=wikitext&format=json" | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
-print(data['parse']['wikitext']['*'][:30000])
+print(data['parse']['wikitext']['*'][:50000])
 " > /tmp/antislop-cleanup.txt
 ```
 
-2. Read the output and diff against patterns already in this skill
-3. For genuinely new patterns not already covered:
-   - Classify into Tier 1/2/3 based on how strongly they signal AI
-   - Add to the appropriate table with example and fix
-   - Update the pattern count in the overview
-4. Update `last-refreshed` date in frontmatter
-5. Report what was added (if anything)
+Then:
 
-**Don't add duplicates.** Many Wikipedia patterns are already covered here under different names. Only add patterns that represent genuinely new detection signals.
+1. Diff the latest page against this skill.
+2. Add genuinely new signals only; do not duplicate renamed patterns.
+3. Separate hard artefacts from weak style tells.
+4. Update `last-refreshed` and `pattern-count`.
+5. Preserve the caveat that signs are not proof.
 
 ---
 
 ## References
 
-- [Wikipedia: Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing)
-- [WikiProject AI Cleanup](https://en.wikipedia.org/wiki/Wikipedia:WikiProject_AI_Cleanup)
-- Finnish study on "delve" usage (56,878 essays)
-- Georgia Tech analysis (168.3M articles)
+- [Wikipedia:Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing)
+- [Wikipedia:WikiProject AI Cleanup](https://en.wikipedia.org/wiki/Wikipedia:WikiProject_AI_Cleanup)
+- [Wikipedia:Large language models](https://en.wikipedia.org/wiki/Wikipedia:Large_language_models)
 
 ---
 
 ## Core Principle
 
-**AI slop isn't about individual words -- it's about patterns.**
+**AI slop is not just about words. It is about patterns, missing source support, and machine-shaped defaults.**
 
-One "moreover" doesn't make content AI-generated. But "moreover" + "it's worth noting" + "delve into" + uniform sentences + emoji headers = obvious slop.
+One "moreover" means little. "Moreover" plus generic significance claims plus Markdown-wikitext mixups plus fake DOI plus `turn0search0` means stop and verify before publishing.
 
-The goal is writing that sounds like a specific human with specific opinions, not a very polite committee trying not to offend anyone.
+The goal is not to hide AI use. The goal is writing that is specific, sourced, honest, and fit for its context.
